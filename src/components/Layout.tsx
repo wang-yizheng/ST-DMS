@@ -30,6 +30,7 @@ const menuItems: MenuItem[] = [
   { key: 'reports', label: '报表追溯', icon: '📄', roles: ['admin', 'supervisor', 'inspector'] },
   { key: 'ai-chat', label: 'AI智能问答', icon: '🤖', roles: ['admin', 'supervisor', 'inspector'] },
   { key: 'announcements', label: '公告通知', icon: '📢', roles: ['admin', 'supervisor', 'inspector', 'production'] },
+  { key: 'backend', label: '后端架构', icon: '🖥️', roles: ['admin', 'supervisor'] },
 ];
 
 export default function Layout({ currentUser, currentPage, onNavigate, onLogout, sidebarCollapsed, onToggleSidebar, children }: LayoutProps) {

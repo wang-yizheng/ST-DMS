@@ -11,6 +11,7 @@ import NonConforming from './pages/NonConforming';
 import QualityAnalysis from './pages/QualityAnalysis';
 import Reports from './pages/Reports';
 import Announcements from './pages/Announcements';
+import BackendArchitecture from './pages/BackendArchitecture';
 
 export type UserRole = 'admin' | 'supervisor' | 'inspector' | 'production';
 
@@ -23,7 +24,7 @@ export interface UserInfo {
   department: string;
 }
 
-export type PageKey = 'dashboard' | 'system' | 'basic-data' | 'ai-chat' | 'tasks' | 'data-collection' | 'non-conforming' | 'quality-analysis' | 'reports' | 'announcements';
+export type PageKey = 'dashboard' | 'system' | 'basic-data' | 'ai-chat' | 'tasks' | 'data-collection' | 'non-conforming' | 'quality-analysis' | 'reports' | 'announcements' | 'backend';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -72,6 +73,8 @@ function App() {
         return <Reports />;
       case 'announcements':
         return <Announcements user={currentUser} />;
+      case 'backend':
+        return <BackendArchitecture />;
       default:
         return <Dashboard user={currentUser} />;
     }
