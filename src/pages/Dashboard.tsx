@@ -108,6 +108,88 @@ export default function Dashboard({ user }: DashboardProps) {
         </div>
       </div>
 
+      {/* Inspector Workload Stats */}
+      {(user.role === 'inspector') && (
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <h3 className="font-semibold text-gray-800 mb-4">📊 个人工作量统计</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-blue-50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-blue-600">12</p>
+              <p className="text-xs text-gray-500">本月任务数</p>
+            </div>
+            <div className="bg-green-50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-green-600">1,286</p>
+              <p className="text-xs text-gray-500">检测数据条数</p>
+            </div>
+            <div className="bg-orange-50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-orange-600">23</p>
+              <p className="text-xs text-gray-500">发现不合格项</p>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-purple-600">98.2%</p>
+              <p className="text-xs text-gray-500">任务按时完成率</p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">近7天检测量</h4>
+            <div className="flex items-end gap-2 h-20">
+              {[85, 120, 95, 140, 110, 130, 105].map((v, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full bg-blue-400 rounded-t" style={{ height: `${(v / 140) * 100}%` }}></div>
+                  <span className="text-[10px] text-gray-400">{['一', '二', '三', '四', '五', '六', '日'][i]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Production Submission */}
+      {user.role === 'production' && (
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+          <h3 className="font-semibold text-gray-800 mb-4">📝 送检申请</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <option>选择产品型号</option>
+              <option>ST-1001A 基础款A</option>
+              <option>ST-2002B 标准款B</option>
+              <option>ST-3003C 豪华款C</option>
+              <option>ST-4004D 旗舰款D</option>
+            </select>
+            <input type="text" placeholder="批次号" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+            <input type="number" placeholder="送检数量" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+          </div>
+          <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">提交送检申请</button>
+          <div className="mt-4 border-t pt-4">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">我的送检记录</h4>
+            <div className="space-y-2">
+              {[
+                { batch: 'B20260310', product: '基础款A', qty: 200, status: '检测中', progress: '65%' },
+                { batch: 'B20260312', product: '标准款B', qty: 150, status: '待检测', progress: '0%' },
+                { batch: 'B20260308', product: '基础款A', qty: 300, status: '已完成', progress: '100%' },
+              ].map((r, i) => (
+                <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{r.batch} - {r.product}</p>
+                    <p className="text-xs text-gray-500">{r.qty}台</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-20 bg-gray-200 rounded-full h-2">
+                      <div className="bg-blue-500 h-2 rounded-full" style={{ width: r.progress }}></div>
+                    </div>
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      r.status === '已完成' ? 'bg-green-100 text-green-700' :
+                      r.status === '检测中' ? 'bg-blue-100 text-blue-700' :
+                      'bg-orange-100 text-orange-700'
+                    }`}>{r.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Recent Tasks & Notifications */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
