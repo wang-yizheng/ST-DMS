@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { knowledgeBase } from '../data/mockData';
+import { knowledgeBase as initialKnowledgeBase } from '../data/mockData';
 
 interface Message {
   id: number;
@@ -7,6 +7,20 @@ interface Message {
   content: string;
   sources?: string[];
   timestamp: string;
+}
+
+interface KnowledgeItem {
+  id: number;
+  title: string;
+  content: string;
+  source: string;
+  keywords: string[];
+  createTime: string;
+  updateTime: string;
+}
+
+interface AIChatProps {
+  userRole?: 'admin' | 'supervisor' | 'inspector' | 'production';
 }
 
 // DeepSeek API 配置
@@ -24,7 +38,7 @@ const DEFAULT_CONFIG: DeepSeekConfig = {
   useRealApi: false,
 };
 
-export default function AIChat() {
+export default function AIChat({ userRole }: AIChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
@@ -40,12 +54,96 @@ export default function AIChat() {
     const saved = localStorage.getItem('deepseek_config');
     return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
   });
+  
+  // 知识库管理状态
+  const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeItem[]>(() => {
+    const saved = localStorage.getItem('knowledge_base');
+    return saved ? JSON.parse(saved) : initialKnowledgeBase.map(item => ({
+      ...item,
+      title: item.content.substring(0, 50) + '...',
+      createTime: new Date().toISOString(),
+      updateTime: new Date().toISOString(),
+    }));
+  });
+  const [showKnowledgeManager, setShowKnowledgeManager] = useState(false);
+  const [editingKnowledge, setEditingKnowledge] = useState<KnowledgeItem | null>(null);
+  const [knowledgeForm, setKnowledgeForm] = useState({
+    title: '',
+    content: '',
+    source: '',
+    keywords: '',
+  });
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 保存配置到 localStorage
   useEffect(() => {
     localStorage.setItem('deepseek_config', JSON.stringify(config));
   }, [config]);
+
+  // 保存知识库到 localStorage
+  useEffect(() => {
+    localStorage.setItem('knowledge_base', JSON.stringify(knowledgeBase));
+  }, [knowledgeBase]);
+
+  // 知识库 CRUD 操作
+  const handleAddKnowledge = () => {
+    setEditingKnowledge(null);
+    setKnowledgeForm({ title: '', content: '', source: '', keywords: '' });
+    setShowKnowledgeManager(true);
+  };
+
+  const handleEditKnowledge = (item: KnowledgeItem) => {
+    setEditingKnowledge(item);
+    setKnowledgeForm({
+      title: item.title,
+      content: item.content,
+      source: item.source,
+      keywords: item.keywords.join(', '),
+    });
+    setShowKnowledgeManager(true);
+  };
+
+  const handleDeleteKnowledge = (id: number) => {
+    if (window.confirm('确定要删除这条知识吗？此操作不可恢复。')) {
+      setKnowledgeBase(prev => prev.filter(item => item.id !== id));
+    }
+  };
+
+  const handleSaveKnowledge = () => {
+    if (!knowledgeForm.title || !knowledgeForm.content || !knowledgeForm.source) {
+      alert('请填写完整的知识信息');
+      return;
+    }
+
+    const keywords = knowledgeForm.keywords.split(',').map(k => k.trim()).filter(k => k);
+    const now = new Date().toISOString();
+
+    if (editingKnowledge) {
+      // 编辑
+      setKnowledgeBase(prev => prev.map(item => 
+        item.id === editingKnowledge.id 
+          ? { ...item, ...knowledgeForm, keywords, updateTime: now }
+          : item
+      ));
+    } else {
+      // 新增
+      const newItem: KnowledgeItem = {
+        id: Date.now(),
+        title: knowledgeForm.title,
+        content: knowledgeForm.content,
+        source: knowledgeForm.source,
+        keywords,
+        createTime: now,
+        updateTime: now,
+      };
+      setKnowledgeBase(prev => [...prev, newItem]);
+    }
+
+    setShowKnowledgeManager(false);
+    setEditingKnowledge(null);
+    setKnowledgeForm({ title: '', content: '', source: '', keywords: '' });
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -69,7 +167,7 @@ export default function AIChat() {
         }
       }
       if (score > bestMatch.score) {
-        bestMatch = { content: item.content, sources: [item.content.split('依据')[1] || '内部知识库'], score };
+        bestMatch = { content: item.content, sources: [item.source || '内部知识库'], score };
       }
     }
 
@@ -226,6 +324,17 @@ ${question}
             基于RAG技术 · {config.useRealApi && config.apiKey ? 'DeepSeek API' : '模拟模式'} · 检测标准知识库
           </p>
         </div>
+        {userRole === 'admin' && (
+          <button
+            onClick={() => setShowKnowledgeManager(true)}
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            title="管理知识库"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </button>
+        )}
         <button
           onClick={() => setShowSettings(true)}
           className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -436,6 +545,141 @@ ${question}
                 className="px-4 py-2 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50"
               >
                 重置
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Knowledge Manager Modal */}
+      {showKnowledgeManager && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-semibold">知识库管理</h3>
+              <button onClick={() => { setShowKnowledgeManager(false); setEditingKnowledge(null); }} className="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Action Bar */}
+              <div className="flex justify-between items-center mb-4">
+                <p className="text-sm text-gray-600">共 {knowledgeBase.length} 条知识</p>
+                <button
+                  onClick={handleAddKnowledge}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  + 新增知识
+                </button>
+              </div>
+
+              {/* Knowledge List */}
+              <div className="space-y-3">
+                {knowledgeBase.map(item => (
+                  <div key={item.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-800 mb-1">{item.title}</h4>
+                        <p className="text-xs text-gray-500 mb-2">来源：{item.source}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditKnowledge(item)}
+                          className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                        >
+                          编辑
+                        </button>
+                        <button
+                          onClick={() => handleDeleteKnowledge(item.id)}
+                          className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                        >
+                          删除
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">{item.content}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {item.keywords.map((kw, idx) => (
+                        <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                          {kw}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">
+                      创建：{new Date(item.createTime).toLocaleString()} | 更新：{new Date(item.updateTime).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Knowledge Edit Modal */}
+      {showKnowledgeManager && (editingKnowledge || knowledgeForm.title || knowledgeForm.content) && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl p-6">
+            <h3 className="text-lg font-semibold mb-4">{editingKnowledge ? '编辑知识' : '新增知识'}</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">标题 <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={knowledgeForm.title}
+                  onChange={(e) => setKnowledgeForm({ ...knowledgeForm, title: e.target.value })}
+                  placeholder="请输入知识标题"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">内容 <span className="text-red-500">*</span></label>
+                <textarea
+                  value={knowledgeForm.content}
+                  onChange={(e) => setKnowledgeForm({ ...knowledgeForm, content: e.target.value })}
+                  placeholder="请输入知识内容（支持详细描述）"
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">来源标准 <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={knowledgeForm.source}
+                  onChange={(e) => setKnowledgeForm({ ...knowledgeForm, source: e.target.value })}
+                  placeholder="如：GB/T 34549—2024 第6.2.1条"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">关键词</label>
+                <input
+                  type="text"
+                  value={knowledgeForm.keywords}
+                  onChange={(e) => setKnowledgeForm({ ...knowledgeForm, keywords: e.target.value })}
+                  placeholder="多个关键词用逗号分隔，如：冲洗,性能,用水量"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+                <p className="text-xs text-gray-400 mt-1">用于 RAG 检索时匹配用户问题</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => { setShowKnowledgeManager(false); setEditingKnowledge(null); setKnowledgeForm({ title: '', content: '', source: '', keywords: '' }); }}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSaveKnowledge}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                保存
               </button>
             </div>
           </div>

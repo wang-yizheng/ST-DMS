@@ -60,7 +60,7 @@ function App() {
       case 'basic-data':
         return <BasicData />;
       case 'ai-chat':
-        return <AIChat />;
+        return <AIChat userRole={user.role} />;
       case 'tasks':
         return <TaskManagement user={currentUser} />;
       case 'data-collection':
